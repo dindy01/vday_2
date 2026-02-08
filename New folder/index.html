@@ -149,6 +149,7 @@
         .player {
             position: absolute;
             background-color: var(--primary);
+            
             border-radius: 50%;
             transition: top 0.1s linear, left 0.1s linear;
             z-index: 10;
@@ -191,6 +192,11 @@
 
         .control-btn:active { background: var(--wall-color); }
 
+        @media (max-width: 400px) {
+            #mute-btn { width: 30px; height: 30px; font-size: 1rem; }
+        }
+
+
         /* 
          * FINAL SCREEN ANIMATIONS 
          */
@@ -231,12 +237,11 @@
         <section id="screen-entry" class="screen active">
             <div class="heart-big">♥</div>
             <h1>A Little Journey</h1>
-            <button onclick="Game.startLevel(0)">Start</button>
+            <button onclick="Game.startLevel(0); Game.startMusic();">Start</button>
         </section>
 
         <!-- SCREEN 2: NARRATIVE INTRO -->
         <section id="screen-intro" class="screen">
-            <h2 id="intro-title">Level 1</h2>
             <p id="intro-text">...</p>
             <button onclick="Game.enterMaze()">Begin</button>
         </section>
@@ -282,10 +287,28 @@
         <section id="screen-success" class="screen">
             <div class="heart-big">♥</div>
             <h2>Happy Valentine's Day!</h2>
-            <p>I can't wait.</p>
+            <p>See you soon pooka.</p>
         </section>
 
+        <!--Mute Button-->
+        <button id="mute-btn" 
+        style=" position: fixed;
+            top: 3px;
+            right: 10px;
+            width: 40px;
+            height: 40px;
+            background-color: var(--bg-color);
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: none;
+            z-index: 999;">🔊
+        </button>
+
     </div>
+    <audio id="bg-music" loop>
+        <source src="no_one_noticed1.0.mp3" type="audio/mpeg">
+    </audio>
+
 
     <script>
         /**
@@ -296,7 +319,7 @@
             {
                 // LEVEL 1
                 intro: "Moving forward is easier when you know the destination.",
-                reward: "Next stop: A Surprise Dinner at Mario's", // <--- CHANGE THIS
+                reward: "Next stop: a walk along the seafront to the docks, then home with pastries, just us.", // <--- CHANGE THIS
                 hasTimer: false,
                 // 1 = Wall, 0 = Path, 2 = Start, 3 = Goal
                 map: [
@@ -312,7 +335,7 @@
             {
                 // LEVEL 2
                 intro: "Knowing where isn't enough. Timing matters.",
-                reward: "The clock is set: Friday at 8:00 PM", // <--- CHANGE THIS
+                reward: "The clock is set: Saturday 14th at 1:30 PM", // <--- CHANGE THIS
                 hasTimer: true,
                 seconds: 15,
                 map: [
@@ -334,7 +357,7 @@
                 map: [
                     [1,1,1,1,1,1,1,1],
                     [1,2,0,0,0,0,0,1],
-                    [1,0,0,0,0,0,0,1],
+                    [1,0,0,0,0 ,0,0,1],
                     [1,0,0,0,0,0,0,1],
                     [1,0,0,0,0,0,3,1],
                     [1,1,1,1,1,1,1,1]
@@ -357,6 +380,7 @@
             elIntro: document.getElementById('screen-intro'),
             elGame: document.getElementById('screen-game'),
             elReward: document.getElementById('screen-reward'),
+            musicEl: document.getElementById('bg-music'),
             elFinal: document.getElementById('screen-final'),
             elSuccess: document.getElementById('screen-success'),
             
@@ -381,7 +405,25 @@
                         case 'ArrowRight': this.movePlayer(1, 0); break;
                     }
                 });
+
+                this.initMuteToggle();
             },
+
+            // Mute toggle
+            initMuteToggle() {
+                const btn = document.getElementById('mute-btn');
+                btn.addEventListener('click', () => {
+                    if (!this.musicEl) return;
+                    if (this.musicEl.muted) {
+                        this.musicEl.muted = false;
+                        btn.innerText = '🔊';
+                    } else {
+                        this.musicEl.muted = true;
+                        btn.innerText = '🔇';
+                    }
+                });
+            },
+
 
             // Helper to switch screens with fade
             switchScreen(newScreenEl) {
@@ -480,6 +522,7 @@
             updatePlayerVisuals() {
                 // We use pixel translation to move the absolute player div
                 // Get the size of a cell (handling responsive resizing)
+                
                 const firstCell = this.elMazeContainer.querySelector('.cell');
                 const size = firstCell.offsetWidth; // width/height including border/padding
                 const gap = 2; // CSS Grid Gap
@@ -536,6 +579,7 @@
             },
 
             levelComplete() {
+
                 this.isInputBlocked = true;
                 clearInterval(this.timerInterval);
 
@@ -552,19 +596,40 @@
                     }
                 }, 300);
             },
+             
+            startMusic() {
+                if (!this.musicEl) return;
+                this.musicEl.volume = 0.25; // subtle
+                this.musicEl.play().catch(() => {});
+            },
+
+            fadeOutMusic() {
+                if (!this.musicEl) return;
+                const fade = setInterval(() => {
+                    if (this.musicEl.volume > 0.02) {
+                    this.musicEl.volume -= 0.02;
+                    } else {
+                    this.musicEl.pause();
+                    this.musicEl.volume = 0.15;
+                    clearInterval(fade);
+                    }
+                }, 100);
+            },
 
             nextLevel() {
                 const nextIdx = this.currentLevel + 1;
                 if (nextIdx < MAZE_CONFIG.length) {
                     this.startLevel(nextIdx);
                 } else {
-                    // Go to Final Question
+                    setTimeout(() => {
                     this.switchScreen(this.elFinal);
+                    }, 600);
                 }
             },
 
             finish(response) {
                 // Both buttons lead to success
+                this.fadeOutMusic();
                 this.switchScreen(this.elSuccess);
             }
         };
